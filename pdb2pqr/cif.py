@@ -142,7 +142,17 @@ def convert_cif_atom_site_to_pdb_line(
     name = atoms.get_value("label_atom_id", row_index)
     alt_id = atoms.get_value("label_alt_id", row_index)
     res_name = atoms.get_value("label_comp_id", row_index)
-    chain = atoms.get_value("label_asym_id", row_index)
+    # Prefer the author chain id (auth_asym_id); fall back to the mmCIF label
+    # (label_asym_id) only when the author id is absent or a CIF null. This
+    # keeps the chain consistent with res_seq (read from auth_seq_id) and with
+    # PROPKA's mmCIF reader, so the value round-trips out as a faithful author
+    # chain rather than the mmCIF label.
+    if "auth_asym_id" in atoms.attribute_list:
+        chain = atoms.get_value("auth_asym_id", row_index)
+        if chain in (None, "?", "."):
+            chain = atoms.get_value("label_asym_id", row_index)
+    else:
+        chain = atoms.get_value("label_asym_id", row_index)
     res_seq = int(atoms.get_value("auth_seq_id", row_index))
     x = float(atoms.get_value("Cartn_x", row_index))
     y = float(atoms.get_value("Cartn_y", row_index))

@@ -322,6 +322,49 @@ def test_reader_missing_header_categories_nonfatal(tmp_path):
     assert any(isinstance(a, (pdb.ATOM, pdb.HETATM)) for a in pdblist)
 
 
+_AUTH_LABEL_CIF = """data_authlabel
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_seq_id
+_atom_site.auth_asym_id
+_atom_site.auth_seq_id
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_PDB_model_num
+ATOM 1 N N . GLY LB 1 SS 137 0.0 0.0 0.0 1.0 0.0 1
+ATOM 2 C CA . GLY LB 1 SS 137 1.5 0.0 0.0 1.0 0.0 1
+"""
+
+
+def test_reader_prefers_author_chain(tmp_path):
+    # The author chain (auth_asym_id=SS) must win over the mmCIF label
+    # (label_asym_id=LB), consistent with res_seq (auth_seq_id=137), so the
+    # value round-trips out as a faithful author chain -- not the label.
+    pdblist, _ = _read_cif_text(tmp_path, _AUTH_LABEL_CIF)
+    atoms = [a for a in pdblist if isinstance(a, (pdb.ATOM, pdb.HETATM))]
+    assert atoms
+    assert all(a.chain_id == "SS" for a in atoms)  # not "LB"
+    assert all(a.res_seq == 137 for a in atoms)  # auth_seq_id, not label_seq_id
+    assert Atom(atoms[0], "ATOM").get_cif_atom_dict()["auth_asym_id"] == "SS"
+
+
+def test_reader_falls_back_to_label_when_no_author_chain(tmp_path):
+    # _BIG_ATOM_SITE has no auth_asym_id column -> chain must fall back to the
+    # label so nothing regresses on files that only carry label ids.
+    pdblist, _ = _read_cif_text(tmp_path, _BIG_ATOM_SITE)
+    atoms = [a for a in pdblist if isinstance(a, (pdb.ATOM, pdb.HETATM))]
+    assert atoms and all(a.chain_id == "AA" for a in atoms)
+
+
 # ---------------------------------------------------------------------------
 # psize: free-format PQR parsing
 # ---------------------------------------------------------------------------
