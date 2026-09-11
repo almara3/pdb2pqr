@@ -154,6 +154,14 @@ def convert_cif_atom_site_to_pdb_line(
     else:
         chain = atoms.get_value("label_asym_id", row_index)
     res_seq = int(atoms.get_value("auth_seq_id", row_index))
+    # Insertion code (single char, fits PDB column 27). Distinguishes residues
+    # that share a chain and sequence number (e.g. 100 vs 100A); dropping it
+    # would silently MERGE them. Absent column or a CIF null -> blank.
+    ins_code = " "
+    if "pdbx_PDB_ins_code" in atoms.attribute_list:
+        ic = atoms.get_value("pdbx_PDB_ins_code", row_index)
+        if ic not in (None, "?", ".", ""):
+            ins_code = ic[0]
     x = float(atoms.get_value("Cartn_x", row_index))
     y = float(atoms.get_value("Cartn_y", row_index))
     z = float(atoms.get_value("Cartn_z", row_index))
@@ -215,7 +223,7 @@ def convert_cif_atom_site_to_pdb_line(
         f" "  #             21 Space
         f"{line_chain:1}"  #     22 Chain Id
         f"{line_res_seq:>4}"  #  23-26 Residue sequence number
-        f" "  #             27 Code for insertion of residues
+        f"{ins_code:1}"  #  27 Code for insertion of residues
         f"   "  #           28-30 Spaces
         f"{x:8.3f}"  #      31-38 X-coordinates
         f"{y:8.3f}"  #      39-46 Y-coordinates

@@ -365,6 +365,44 @@ def test_reader_falls_back_to_label_when_no_author_chain(tmp_path):
     assert atoms and all(a.chain_id == "AA" for a in atoms)
 
 
+_ICODE_CIF = """data_icode
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_seq_id
+_atom_site.auth_asym_id
+_atom_site.auth_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_PDB_model_num
+ATOM 1 N N . GLY A 1 A 100 ? 0.0 0.0 0.0 1.0 0.0 1
+ATOM 2 N N . SER A 2 A 100 A 5.0 0.0 0.0 1.0 0.0 1
+"""
+
+
+def test_reader_preserves_insertion_code(tmp_path):
+    # Residues sharing chain + sequence number but differing by insertion code
+    # (100 vs 100A) must stay distinct; dropping the icode silently merges them.
+    pdblist, _ = _read_cif_text(tmp_path, _ICODE_CIF)
+    atoms = [a for a in pdblist if isinstance(a, (pdb.ATOM, pdb.HETATM))]
+    keys = {(a.chain_id, a.res_seq, a.ins_code) for a in atoms}
+    assert keys == {("A", 100, ""), ("A", 100, "A")}
+    # and the icode round-trips out through the writer (blank -> CIF null '?')
+    icodes = {
+        Atom(a, "ATOM").get_cif_atom_dict()["pdbx_PDB_ins_code"] for a in atoms
+    }
+    assert icodes == {"?", "A"}
+
+
 # ---------------------------------------------------------------------------
 # psize: free-format PQR parsing
 # ---------------------------------------------------------------------------
