@@ -45,7 +45,9 @@ def atom_site(block: pdbx.containers.ContainerBase):
     if len(num_model_arr) == 1:
         # TODO - this part of the conditional should be a separate function
         for i in range(atoms.row_count):
-            result = convert_cif_atom_site_to_pdb_line(atoms=atoms, row_index=i)
+            result = convert_cif_atom_site_to_pdb_line(
+                atoms=atoms, row_index=i
+            )
             if result is None:
                 continue
             line, serial, chain, res_seq = result

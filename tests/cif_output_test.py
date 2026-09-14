@@ -353,7 +353,9 @@ def test_reader_prefers_author_chain(tmp_path):
     atoms = [a for a in pdblist if isinstance(a, (pdb.ATOM, pdb.HETATM))]
     assert atoms
     assert all(a.chain_id == "SS" for a in atoms)  # not "LB"
-    assert all(a.res_seq == 137 for a in atoms)  # auth_seq_id, not label_seq_id
+    assert all(
+        a.res_seq == 137 for a in atoms
+    )  # auth_seq_id, not label_seq_id
     assert Atom(atoms[0], "ATOM").get_cif_atom_dict()["auth_asym_id"] == "SS"
 
 
